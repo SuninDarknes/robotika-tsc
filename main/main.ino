@@ -45,12 +45,12 @@ public:
   }
   static void followLine() {
     if (digitalRead(LEFT_IN_IR_SENSOR)) {
-      ICR3 = 10000;
+      ICR3 = 100;
       ICR4 = 130;
     }
     if (digitalRead(RIGHT_IN_IR_SENSOR)) {
       ICR3 = 130;
-      ICR4 = 10000;
+      ICR4 = 100;
     }
   }
 
