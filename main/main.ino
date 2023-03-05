@@ -1,6 +1,7 @@
 #include <AccelStepper.h>
 #include <Wire.h>
 #include <Math.h>
+#include <Servo.h>
 
 #define DISTANCE_TO_BALL 15
 
@@ -24,8 +25,11 @@
 #define FRONT_US_SENSOR_ECHO 41
 
 #define BOTTOM_SERVO 11
-#define MID_SERVO 12
-#define GRIPPER_SERVO 13
+#define MID_SERVO 13
+#define GRIPPER_SERVO 12
+#define BRUSHLESS_MOTOR 45
+
+Servo bottomServo, midServo, gripperServo, brushlessMotor;
 
 void setupPins() {
   pinMode(RIGHT_STEPPER_DIR, OUTPUT);
@@ -37,142 +41,135 @@ void setupPins() {
   pinMode(LEFT_IN_IR_SENSOR, INPUT);
   pinMode(RIGHT_OUT_IR_SENSOR, INPUT);
   pinMode(LEFT_OUT_IR_SENSOR, INPUT);
+
+  bottomServo.attach(BOTTOM_SERVO);
+  midServo.attach(MID_SERVO);
+  gripperServo.attach(GRIPPER_SERVO);
+  brushlessMotor.attach(BRUSHLESS_MOTOR);
 }
 
 namespace colorSensor {
 
-  byte i2cWriteBuffer[10];
-  byte i2cReadBuffer[10];
+byte i2cWriteBuffer[10];
+byte i2cReadBuffer[10];
 
-  #define SensorAddressWrite 0x5A  //
-  #define SensorAddressRead 0x5A   //29
-  #define EnableAddress 0xD1       // register address + command bits
-  #define ATimeAddress 0xd2        // register address + command bits
-  #define WTimeAddress 0xd4        // register address + command bits
-  #define ConfigAddress 0xDE       // register address + command bits
-  #define ControlAddress 0xE0      // register address + command bits
-  #define IDAddress 0xe3           // register address + command bits
-  #define ColorAddress 0xe6        // register address + command bits
+#define SensorAddressWrite 0x5A  //
+#define SensorAddressRead 0x5A   //29
+#define EnableAddress 0xD1       // register address + command bits
+#define ATimeAddress 0xd2        // register address + command bits
+#define WTimeAddress 0xd4        // register address + command bits
+#define ConfigAddress 0xDE       // register address + command bits
+#define ControlAddress 0xE0      // register address + command bits
+#define IDAddress 0xe3           // register address + command bits
+#define ColorAddress 0xe6        // register address + command bits
 
-  unsigned long count = 0, t_start = 0, t_end = 0, t_sum = 0;
+unsigned long count = 0, t_start = 0, t_end = 0, t_sum = 0;
 
-  unsigned int clear_color = 0;
-  unsigned int red_color = 0;
-  unsigned int green_color = 0;
-  unsigned int blue_color = 0;
-  /*  
+unsigned int clear_color = 0;
+unsigned int red_color = 0;
+unsigned int green_color = 0;
+unsigned int blue_color = 0;
+/*  
     Send register address and the byte value you want to write the magnetometer and 
     loads the destination register with the value you send
     */
-  void Writei2cRegisters(byte numberbytes, byte command) {
-    byte i = 0;
+void Writei2cRegisters(byte numberbytes, byte command) {
+  byte i = 0;
 
-    Wire.beginTransmission(SensorAddressWrite);  // Send address with Write bit set
-    Wire.write(command);                         // Send command, normally the register address
-    for (i = 0; i < numberbytes; i++)            // Send data
-      Wire.write(i2cWriteBuffer[i]);
-    Wire.endTransmission();
+  Wire.beginTransmission(SensorAddressWrite);  // Send address with Write bit set
+  Wire.write(command);                         // Send command, normally the register address
+  for (i = 0; i < numberbytes; i++)            // Send data
+    Wire.write(i2cWriteBuffer[i]);
+  Wire.endTransmission();
 
-    delayMicroseconds(100);  // allow some time for bus to settle
-  }
+  delayMicroseconds(100);  // allow some time for bus to settle
+}
 
-  /*  
+/*  
     Send register address to this function and it returns byte value
     for the magnetometer register's contents 
     */
-  byte Readi2cRegisters(int numberbytes, byte command) {
-    byte i = 0;
+byte Readi2cRegisters(int numberbytes, byte command) {
+  byte i = 0;
 
-    Wire.beginTransmission(SensorAddressWrite);  // Write address of read to sensor
-    Wire.write(command);
-    Wire.endTransmission();
+  Wire.beginTransmission(SensorAddressWrite);  // Write address of read to sensor
+  Wire.write(command);
+  Wire.endTransmission();
 
-    delayMicroseconds(100);  // allow some time for bus to settle
+  delayMicroseconds(100);  // allow some time for bus to settle
 
-    Wire.requestFrom(SensorAddressRead, numberbytes);  // read data
-    for (i = 0; i < numberbytes; i++)
-      i2cReadBuffer[i] = Wire.read();
+  Wire.requestFrom(SensorAddressRead, numberbytes);  // read data
+  for (i = 0; i < numberbytes; i++)
+    i2cReadBuffer[i] = Wire.read();
 
-    Wire.endTransmission();
+  Wire.endTransmission();
 
-    delayMicroseconds(100);  // allow some time for bus to settle
-  }
+  delayMicroseconds(100);  // allow some time for bus to settle
+}
 
-  void init_TCS34725(void) {
-    i2cWriteBuffer[0] = 0x00;
-    //i2cWriteBuffer[0] = 0xff;
-    Writei2cRegisters(1, ATimeAddress);  // RGBC timing is 256 - contents x 2.4mS =
-    i2cWriteBuffer[0] = 0x00;
-    Writei2cRegisters(1, ConfigAddress);  // Can be used to change the wait time
-    i2cWriteBuffer[0] = 0x00;
-    Writei2cRegisters(1, ControlAddress);  // RGBC gain control
-    i2cWriteBuffer[0] = 0x03;
-    Writei2cRegisters(1, EnableAddress);  // enable ADs and oscillator for sensor
-  }
+void init_TCS34725(void) {
+  i2cWriteBuffer[0] = 0x00;
+  //i2cWriteBuffer[0] = 0xff;
+  Writei2cRegisters(1, ATimeAddress);  // RGBC timing is 256 - contents x 2.4mS =
+  i2cWriteBuffer[0] = 0x00;
+  Writei2cRegisters(1, ConfigAddress);  // Can be used to change the wait time
+  i2cWriteBuffer[0] = 0x00;
+  Writei2cRegisters(1, ControlAddress);  // RGBC gain control
+  i2cWriteBuffer[0] = 0x03;
+  Writei2cRegisters(1, EnableAddress);  // enable ADs and oscillator for sensor
+}
 
-  void get_TCS34725ID(void) {
-    Readi2cRegisters(1, IDAddress);
-    if (i2cReadBuffer[0] = 0x44)
-      Serial.println("TCS34725 is present");
-    else
-      Serial.println("TCS34725 not responding");
-  }
+void get_TCS34725ID(void) {
+  Readi2cRegisters(1, IDAddress);
+  if (i2cReadBuffer[0] = 0x44)
+    Serial.println("TCS34725 is present");
+  else
+    Serial.println("TCS34725 not responding");
+}
 
-  /*
+/*
     Reads the register values for clear, red, green, and blue.
     */
 
-  void get_Colors(void) {
+void get_Colors(void) {
 
-    Readi2cRegisters(8, ColorAddress);
-    clear_color = (unsigned int)(i2cReadBuffer[1] << 8) + (unsigned int)i2cReadBuffer[0];
-    red_color = (unsigned int)(i2cReadBuffer[3] << 8) + (unsigned int)i2cReadBuffer[2];
-    green_color = (unsigned int)(i2cReadBuffer[5] << 8) + (unsigned int)i2cReadBuffer[4];
-    blue_color = (unsigned int)(i2cReadBuffer[7] << 8) + (unsigned int)i2cReadBuffer[6];
+  Readi2cRegisters(8, ColorAddress);
+  clear_color = (unsigned int)(i2cReadBuffer[1] << 8) + (unsigned int)i2cReadBuffer[0];
+  red_color = (unsigned int)(i2cReadBuffer[3] << 8) + (unsigned int)i2cReadBuffer[2];
+  green_color = (unsigned int)(i2cReadBuffer[5] << 8) + (unsigned int)i2cReadBuffer[4];
+  blue_color = (unsigned int)(i2cReadBuffer[7] << 8) + (unsigned int)i2cReadBuffer[6];
 
-    //t_end = millis();
+  //t_end = millis();
 
-    //t_sum = t_sum + t_end - t_start;
+  //t_sum = t_sum + t_end - t_start;
 
-    // send register values to the serial monitor
-
-
-    if (count == 100) {
-      count = 0;
-      t_end = millis();
-
-      Serial.print("t_end - t_start:");
-      Serial.println(t_end - t_start, DEC);
-
-      t_start = t_end;
-      t_sum = 0;
-    }
-    count++;
-
-    Serial.print("clear color=");
-    Serial.print(clear_color, DEC);
-    Serial.print(" red color=");
-    Serial.print(red_color, DEC);
-    Serial.print(" green color=");
-    Serial.print(green_color, DEC);
-    Serial.print(" blue color=");
-    Serial.println(blue_color, DEC);
+  // send register values to the serial monitor
 
 
-    // Basic RGB color differentiation can be accomplished by comparing the values and the largest reading will be
-    // the prominent color
+  if (count == 100) {
+    count = 0;
+    t_end = millis();
 
-    /*
-      if((red_color>blue_color) && (red_color>green_color))
-        Serial.println("detecting red");
-      else if((green_color>blue_color) && (green_color>red_color))
-        Serial.println("detecting green");
-      else if((blue_color>red_color) && (blue_color>green_color))
-        Serial.println("detecting blue");
-      else
-        Serial.println("color not detectable");
-    */
+    Serial.print("t_end - t_start:");
+    Serial.println(t_end - t_start, DEC);
+
+    t_start = t_end;
+    t_sum = 0;
   }
+  count++;
+
+  Serial.print("clear color=");
+  Serial.print(clear_color, DEC);
+  Serial.print(" red color=");
+  Serial.print(red_color, DEC);
+  Serial.print(" green color=");
+  Serial.print(green_color, DEC);
+  Serial.print(" blue color=");
+  Serial.println(blue_color, DEC);
+
+
+
+}
 }
 
 int getUSDistance(int trigPin, int echoPin) {
@@ -194,7 +191,7 @@ AccelStepper RStepper(1, RIGHT_STEPPER_STEP, RIGHT_STEPPER_DIR);
 class Steppers {
 public:
   static int setup() {
-Wire.begin();
+    Wire.begin();
 
 
 
@@ -312,7 +309,7 @@ void setup() {
 
 
 
-/*
+  /*
   delay(5000);
   ICR3 = 100;
   ICR4 = 100;
@@ -371,8 +368,43 @@ void setup() {
 */
 
   Steppers::stop();
+  delay(2000);
+
+  brushlessMotor.write(50); 
+  bottomServo.write(90);
+  midServo.write(40);
+  gripperServo.write(0);
+
+  delay(2000);
+
+  int pos=0;
+
+  for (pos = 00; pos <= 30; pos += 1) { // goes from 0 degrees to 180 degrees
+      bottomServo.write(90-pos*2);
+  midServo.write(40-pos);
+    delay(15);                       // waits 15 ms for the servo to reach the position
+  }
+  for (pos = 00; pos <= 100; pos += 1) { // goes from 0 degrees to 180 degrees
+      gripperServo.write(pos);
+    delay(15);                       // waits 15 ms for the servo to reach the position
+  }
+    for (pos = 00; pos <= 30*5.5; pos += 1) { // goes from 0 degrees to 180 degrees
+      bottomServo.write(30+pos*1.6/5.5);
+  midServo.write(10+pos);
+    delay(15);                       // waits 15 ms for the servo to reach the position
+  }
+  brushlessMotor.write(60); 
+  delay(2000);
+  
+  for (pos = 00; pos <= 100; pos += 1) { // goes from 0 degrees to 180 degrees
+      gripperServo.write(100-pos);
+    delay(15);                       // waits 15 ms for the servo to reach the position
+  }
+
+
+  delay(2000);
+  
 }
 void loop() {
   colorSensor::get_Colors();
-    
 }
