@@ -237,6 +237,12 @@ public:
     LStepper.move(step);
     RStepper.move(step);
   }
+  static void forceStop() {
+    LStepper.setCurrentPosition(0);
+    RStepper.setCurrentPosition(0);
+    LStepper.moveTo(0);
+    RStepper.moveTo(0);
+  }
   static bool followLine() {
     LStepper.move(10000);
     RStepper.move(10000);
@@ -336,6 +342,10 @@ public:
       followLine(true);
     lineFollowStop();
     move(500);
+    LStepper.setCurrentPosition(0);
+    RStepper.setCurrentPosition(0);
+    LStepper.moveTo(1000);
+    RStepper.moveTo(1000);
     runUntilEnd();
   }
   static void Rotate(int degree) {
@@ -345,6 +355,10 @@ public:
     RStepper.move((long)(8.85 * -degree));
 
     runUntilEnd();
+    if (degree == 180) {
+      move(-500);
+      runUntilEnd();      
+    }
   }
 
   static void RotateUntilSens(int degree) {
@@ -388,7 +402,7 @@ public:
         LStepper.run();
       }
     }
-        LStepper.setMaxSpeed(1000);
+    LStepper.setMaxSpeed(1000);
     RStepper.setMaxSpeed(1000);
   }
 };
@@ -474,7 +488,7 @@ void setup() {
   do {
     Steppers::followUntilLeftTurn();
     Steppers::followUntilEnd();
-Steppers::alignWithLine();
+    Steppers::alignWithLine();
     if (Servos::pickupBall()) break;
     Steppers::Rotate(180);
 
@@ -482,7 +496,7 @@ Steppers::alignWithLine();
     Steppers::followUntilLeftTurn();
     Steppers::followUntilRightTurn();
     Steppers::followUntilEnd();
-Steppers::alignWithLine();
+    Steppers::alignWithLine();
     if (Servos::pickupBall()) break;
     Steppers::Rotate(180);
 
@@ -490,8 +504,8 @@ Steppers::alignWithLine();
     Steppers::followUntilRightTurn();
     Steppers::followUntilLeftTurn();
     Steppers::followUntilEnd();
-    
-Steppers::alignWithLine();
+
+    Steppers::alignWithLine();
     if (Servos::pickupBall()) break;
     Steppers::Rotate(180);
 
@@ -499,19 +513,19 @@ Steppers::alignWithLine();
     Steppers::followUntilLeftTurn();
     Steppers::followUntilRightTurn();
     Steppers::followUntilEnd();
-Steppers::alignWithLine();
+    Steppers::alignWithLine();
     if (Servos::pickupBall()) break;
     Steppers::Rotate(180);
 
     Steppers::followUntilRightTurn();
     Steppers::followUntilEnd();
-Steppers::alignWithLine();
+    Steppers::alignWithLine();
   } while (false);
   Steppers::Rotate(180);
   if (parnaStanica) Steppers::followUntilRightTurn();
   else Steppers::followUntilLeftTurn();
   Steppers::goUntilEnd();
-Steppers::alignWithLine();
+  Steppers::alignWithLine();
   Servos::release();
   Steppers::Rotate(180);
 
