@@ -25,9 +25,22 @@
 #define FRONT_US_SENSOR_ECHO 41
 
 #define BOTTOM_SERVO 11
-#define MID_SERVO 13
-#define GRIPPER_SERVO 12
+#define MID_SERVO 12
+#define GRIPPER_SERVO 13
 #define BRUSHLESS_MOTOR 45
+
+
+#define SensorAddressWrite 0x5A  //
+#define SensorAddressRead 0x5A   //29
+#define EnableAddress 0xD1       // register address + command bits
+#define ATimeAddress 0xd2        // register address + command bits
+#define WTimeAddress 0xd4        // register address + command bits
+#define ConfigAddress 0xDE       // register address + command bits
+#define ControlAddress 0xE0      // register address + command bits
+#define IDAddress 0xe3           // register address + command bits
+#define ColorAddress 0xe6        // register address + command bits
+
+
 
 Servo bottomServo, midServo, gripperServo, brushlessMotor;
 
@@ -48,131 +61,121 @@ void setupPins() {
   brushlessMotor.attach(BRUSHLESS_MOTOR);
 }
 
-namespace colorSensor {
-
-byte i2cWriteBuffer[10];
-byte i2cReadBuffer[10];
-
-#define SensorAddressWrite 0x5A  //
-#define SensorAddressRead 0x5A   //29
-#define EnableAddress 0xD1       // register address + command bits
-#define ATimeAddress 0xd2        // register address + command bits
-#define WTimeAddress 0xd4        // register address + command bits
-#define ConfigAddress 0xDE       // register address + command bits
-#define ControlAddress 0xE0      // register address + command bits
-#define IDAddress 0xe3           // register address + command bits
-#define ColorAddress 0xe6        // register address + command bits
-
-unsigned long count = 0, t_start = 0, t_end = 0, t_sum = 0;
-
-unsigned int clear_color = 0;
-unsigned int red_color = 0;
-unsigned int green_color = 0;
-unsigned int blue_color = 0;
-/*  
-    Send register address and the byte value you want to write the magnetometer and 
-    loads the destination register with the value you send
-    */
-void Writei2cRegisters(byte numberbytes, byte command) {
-  byte i = 0;
-
-  Wire.beginTransmission(SensorAddressWrite);  // Send address with Write bit set
-  Wire.write(command);                         // Send command, normally the register address
-  for (i = 0; i < numberbytes; i++)            // Send data
-    Wire.write(i2cWriteBuffer[i]);
-  Wire.endTransmission();
-
-  delayMicroseconds(100);  // allow some time for bus to settle
-}
-
-/*  
-    Send register address to this function and it returns byte value
-    for the magnetometer register's contents 
-    */
-byte Readi2cRegisters(int numberbytes, byte command) {
-  byte i = 0;
-
-  Wire.beginTransmission(SensorAddressWrite);  // Write address of read to sensor
-  Wire.write(command);
-  Wire.endTransmission();
-
-  delayMicroseconds(100);  // allow some time for bus to settle
-
-  Wire.requestFrom(SensorAddressRead, numberbytes);  // read data
-  for (i = 0; i < numberbytes; i++)
-    i2cReadBuffer[i] = Wire.read();
-
-  Wire.endTransmission();
-
-  delayMicroseconds(100);  // allow some time for bus to settle
-}
-
-void init_TCS34725(void) {
-  i2cWriteBuffer[0] = 0x00;
-  //i2cWriteBuffer[0] = 0xff;
-  Writei2cRegisters(1, ATimeAddress);  // RGBC timing is 256 - contents x 2.4mS =
-  i2cWriteBuffer[0] = 0x00;
-  Writei2cRegisters(1, ConfigAddress);  // Can be used to change the wait time
-  i2cWriteBuffer[0] = 0x00;
-  Writei2cRegisters(1, ControlAddress);  // RGBC gain control
-  i2cWriteBuffer[0] = 0x03;
-  Writei2cRegisters(1, EnableAddress);  // enable ADs and oscillator for sensor
-}
-
-void get_TCS34725ID(void) {
-  Readi2cRegisters(1, IDAddress);
-  if (i2cReadBuffer[0] = 0x44)
-    Serial.println("TCS34725 is present");
-  else
-    Serial.println("TCS34725 not responding");
-}
-
-/*
-    Reads the register values for clear, red, green, and blue.
-    */
-
-void get_Colors(void) {
-
-  Readi2cRegisters(8, ColorAddress);
-  clear_color = (unsigned int)(i2cReadBuffer[1] << 8) + (unsigned int)i2cReadBuffer[0];
-  red_color = (unsigned int)(i2cReadBuffer[3] << 8) + (unsigned int)i2cReadBuffer[2];
-  green_color = (unsigned int)(i2cReadBuffer[5] << 8) + (unsigned int)i2cReadBuffer[4];
-  blue_color = (unsigned int)(i2cReadBuffer[7] << 8) + (unsigned int)i2cReadBuffer[6];
-
-  //t_end = millis();
-
-  //t_sum = t_sum + t_end - t_start;
-
-  // send register values to the serial monitor
+class colorSensor {
+public:
+  byte i2cWriteBuffer[10];
+  byte i2cReadBuffer[10];
 
 
-  if (count == 100) {
-    count = 0;
-    t_end = millis();
 
-    Serial.print("t_end - t_start:");
-    Serial.println(t_end - t_start, DEC);
+  unsigned long count = 0, t_start = 0, t_end = 0, t_sum = 0;
 
-    t_start = t_end;
-    t_sum = 0;
+  unsigned int clear_color = 0;
+  unsigned int red_color = 0;
+  unsigned int green_color = 0;
+  unsigned int blue_color = 0;
+  /*  
+      Send register address and the byte value you want to write the magnetometer and 
+      loads the destination register with the value you send
+      */
+  void Writei2cRegisters(byte numberbytes, byte command) {
+    byte i = 0;
+
+    Wire.beginTransmission(SensorAddressWrite);  // Send address with Write bit set
+    Wire.write(command);                         // Send command, normally the register address
+    for (i = 0; i < numberbytes; i++)            // Send data
+      Wire.write(i2cWriteBuffer[i]);
+    Wire.endTransmission();
+
+    delayMicroseconds(100);  // allow some time for bus to settle
   }
-  count++;
 
-  Serial.print("clear color=");
-  Serial.print(clear_color, DEC);
-  Serial.print(" red color=");
-  Serial.print(red_color, DEC);
-  Serial.print(" green color=");
-  Serial.print(green_color, DEC);
-  Serial.print(" blue color=");
-  Serial.println(blue_color, DEC);
+  /*  
+      Send register address to this function and it returns byte value
+      for the magnetometer register's contents 
+      */
+  byte Readi2cRegisters(int numberbytes, byte command) {
+    byte i = 0;
+
+    Wire.beginTransmission(SensorAddressWrite);  // Write address of read to sensor
+    Wire.write(command);
+    Wire.endTransmission();
+
+    delayMicroseconds(100);  // allow some time for bus to settle
+
+    Wire.requestFrom(SensorAddressRead, numberbytes);  // read data
+    for (i = 0; i < numberbytes; i++)
+      i2cReadBuffer[i] = Wire.read();
+
+    Wire.endTransmission();
+
+    delayMicroseconds(100);  // allow some time for bus to settle
+  }
+
+  void init_TCS34725(void) {
+    i2cWriteBuffer[0] = 0x00;
+    //i2cWriteBuffer[0] = 0xff;
+    Writei2cRegisters(1, ATimeAddress);  // RGBC timing is 256 - contents x 2.4mS =
+    i2cWriteBuffer[0] = 0x00;
+    Writei2cRegisters(1, ConfigAddress);  // Can be used to change the wait time
+    i2cWriteBuffer[0] = 0x00;
+    Writei2cRegisters(1, ControlAddress);  // RGBC gain control
+    i2cWriteBuffer[0] = 0x03;
+    Writei2cRegisters(1, EnableAddress);  // enable ADs and oscillator for sensor
+  }
+
+  void get_TCS34725ID(void) {
+    Readi2cRegisters(1, IDAddress);
+    if (i2cReadBuffer[0] = 0x44)
+      Serial.println("TCS34725 is present");
+    else
+      Serial.println("TCS34725 not responding");
+  }
+
+  /*
+      Reads the register values for clear, red, green, and blue.
+      */
+
+  void get_Colors(void) {
+
+    Readi2cRegisters(8, ColorAddress);
+    clear_color = (unsigned int)(i2cReadBuffer[1] << 8) + (unsigned int)i2cReadBuffer[0];
+    red_color = (unsigned int)(i2cReadBuffer[3] << 8) + (unsigned int)i2cReadBuffer[2];
+    green_color = (unsigned int)(i2cReadBuffer[5] << 8) + (unsigned int)i2cReadBuffer[4];
+    blue_color = (unsigned int)(i2cReadBuffer[7] << 8) + (unsigned int)i2cReadBuffer[6];
+
+    //t_end = millis();
+
+    //t_sum = t_sum + t_end - t_start;
+
+    // send register values to the serial monitor
 
 
+    if (count == 100) {
+      count = 0;
+      t_end = millis();
 
-}
-}
+      Serial.print("t_end - t_start:");
+      Serial.println(t_end - t_start, DEC);
 
-int getUSDistance(int trigPin, int echoPin) {
+      t_start = t_end;
+      t_sum = 0;
+    }
+    count++;
+
+    Serial.print("clear color=");
+    Serial.print(clear_color, DEC);
+    Serial.print(" red color=");
+    Serial.print(red_color, DEC);
+    Serial.print(" green color=");
+    Serial.print(green_color, DEC);
+    Serial.print(" blue color=");
+    Serial.println(blue_color, DEC);
+  }
+};
+
+int
+getUSDistance(int trigPin, int echoPin) {
   digitalWrite(trigPin, LOW);
   delayMicroseconds(2);
   digitalWrite(trigPin, HIGH);
@@ -183,7 +186,7 @@ int getUSDistance(int trigPin, int echoPin) {
   Serial.print("Distance: ");
   Serial.println(distance);
   return distance;
-}
+};
 
 
 AccelStepper LStepper(1, LEFT_STEPPER_STEP, LEFT_STEPPER_DIR);
@@ -303,6 +306,30 @@ public:
   }
 };
 
+class Servos{
+  public:
+  bool hasBall=0;
+  int bottomPos=0;
+  int midPos=0;
+  int gripperPos=0;
+  bool pickupBall(){
+    
+      for (midPos = 00; midPos <= 30; midPos += 1) {
+    bottomServo.write(90 - midPos * 2);
+    midServo.write(40 - midPos);
+    delay(15);  // waits 15 ms for the servo to reach the position
+  }
+  for (gripperPos = 00; gripperPos <= 100; gripperPos += 1) {  // goes from 0 degrees to 180 degrees
+    gripperServo.write(gripperPos);
+    delay(15);  // waits 15 ms for the servo to reach the position
+  }
+  for (bottomPos = 00; bottomPos <= 30 * 5.5; bottomPos += 1) {  // goes from 0 degrees to 180 degrees
+    bottomServo.write(30 + bottomPos * 1.6 / 5.5);
+    midServo.write(10 + bottomPos);
+    delay(15);  // waits 15 ms for the servo to reach the position
+  }
+  }
+};
 
 void setup() {
   setupPins();
@@ -366,45 +393,22 @@ void setup() {
   Steppers::setup();
   Steppers::followUntilEnd();
 */
+  
 
-  Steppers::stop();
-  delay(2000);
-
-  brushlessMotor.write(50); 
-  bottomServo.write(90);
-  midServo.write(40);
+  brushlessMotor.write(50);
+  midServo.write(0);
+  bottomServo.write(60);
   gripperServo.write(0);
 
-  delay(2000);
+  return;
 
-  int pos=0;
-
-  for (pos = 00; pos <= 30; pos += 1) { // goes from 0 degrees to 180 degrees
-      bottomServo.write(90-pos*2);
-  midServo.write(40-pos);
-    delay(15);                       // waits 15 ms for the servo to reach the position
-  }
-  for (pos = 00; pos <= 100; pos += 1) { // goes from 0 degrees to 180 degrees
-      gripperServo.write(pos);
-    delay(15);                       // waits 15 ms for the servo to reach the position
-  }
-    for (pos = 00; pos <= 30*5.5; pos += 1) { // goes from 0 degrees to 180 degrees
-      bottomServo.write(30+pos*1.6/5.5);
-  midServo.write(10+pos);
-    delay(15);                       // waits 15 ms for the servo to reach the position
-  }
-  brushlessMotor.write(60); 
-  delay(2000);
-  
-  for (pos = 00; pos <= 100; pos += 1) { // goes from 0 degrees to 180 degrees
-      gripperServo.write(100-pos);
-    delay(15);                       // waits 15 ms for the servo to reach the position
+  for (pos = 00; pos <= 100; pos += 1) {  // goes from 0 degrees to 180 degrees
+    gripperServo.write(100 - pos);
+    delay(15);  // waits 15 ms for the servo to reach the position
   }
 
 
   delay(2000);
-  
 }
 void loop() {
-  colorSensor::get_Colors();
 }
