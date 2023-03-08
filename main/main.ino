@@ -74,118 +74,118 @@ void setupPins() {
   brushlessMotor.attach(BRUSHLESS_MOTOR);
 }
 
-class colorSensor {
-public:
-  byte i2cWriteBuffer[10];
-  byte i2cReadBuffer[10];
+
+byte i2cWriteBuffer[10];
+byte i2cReadBuffer[10];
 
 
 
-  unsigned long count = 0, t_start = 0, t_end = 0, t_sum = 0;
+unsigned long count = 0, t_start = 0, t_end = 0, t_sum = 0;
 
-  unsigned int clear_color = 0;
-  unsigned int red_color = 0;
-  unsigned int green_color = 0;
-  unsigned int blue_color = 0;
-  /*  
+unsigned int clear_color = 0;
+unsigned int red_color = 0;
+unsigned int green_color = 0;
+unsigned int blue_color = 0;
+/*  
       Send register address and the byte value you want to write the magnetometer and 
       loads the destination register with the value you send
       */
-  void Writei2cRegisters(byte numberbytes, byte command) {
-    byte i = 0;
+void Writei2cRegisters(byte numberbytes, byte command) {
+  byte i = 0;
 
-    Wire.beginTransmission(SensorAddressWrite);  // Send address with Write bit set
-    Wire.write(command);                         // Send command, normally the register address
-    for (i = 0; i < numberbytes; i++)            // Send data
-      Wire.write(i2cWriteBuffer[i]);
-    Wire.endTransmission();
+  Wire.beginTransmission(SensorAddressWrite);  // Send address with Write bit set
+  Wire.write(command);                         // Send command, normally the register address
+  for (i = 0; i < numberbytes; i++)            // Send data
+    Wire.write(i2cWriteBuffer[i]);
+  Wire.endTransmission();
 
-    delayMicroseconds(100);  // allow some time for bus to settle
-  }
+  delayMicroseconds(100);  // allow some time for bus to settle
+}
 
-  /*  
+/*  
       Send register address to this function and it returns byte value
       for the magnetometer register's contents 
       */
-  byte Readi2cRegisters(int numberbytes, byte command) {
-    byte i = 0;
+byte Readi2cRegisters(int numberbytes, byte command) {
+  byte i = 0;
 
-    Wire.beginTransmission(SensorAddressWrite);  // Write address of read to sensor
-    Wire.write(command);
-    Wire.endTransmission();
+  Wire.beginTransmission(SensorAddressWrite);  // Write address of read to sensor
+  Wire.write(command);
+  Wire.endTransmission();
 
-    delayMicroseconds(100);  // allow some time for bus to settle
+  delayMicroseconds(100);  // allow some time for bus to settle
 
-    Wire.requestFrom(SensorAddressRead, numberbytes);  // read data
-    for (i = 0; i < numberbytes; i++)
-      i2cReadBuffer[i] = Wire.read();
+  Wire.requestFrom(SensorAddressRead, numberbytes);  // read data
+  for (i = 0; i < numberbytes; i++)
+    i2cReadBuffer[i] = Wire.read();
 
-    Wire.endTransmission();
+  Wire.endTransmission();
 
-    delayMicroseconds(100);  // allow some time for bus to settle
-  }
+  delayMicroseconds(100);  // allow some time for bus to settle
+}
 
-  void init_TCS34725(void) {
-    i2cWriteBuffer[0] = 0x00;
-    //i2cWriteBuffer[0] = 0xff;
-    Writei2cRegisters(1, ATimeAddress);  // RGBC timing is 256 - contents x 2.4mS =
-    i2cWriteBuffer[0] = 0x00;
-    Writei2cRegisters(1, ConfigAddress);  // Can be used to change the wait time
-    i2cWriteBuffer[0] = 0x00;
-    Writei2cRegisters(1, ControlAddress);  // RGBC gain control
-    i2cWriteBuffer[0] = 0x03;
-    Writei2cRegisters(1, EnableAddress);  // enable ADs and oscillator for sensor
-  }
+void init_TCS34725(void) {
+  i2cWriteBuffer[0] = 0x00;
+  //i2cWriteBuffer[0] = 0xff;
+  Writei2cRegisters(1, ATimeAddress);  // RGBC timing is 256 - contents x 2.4mS =
+  i2cWriteBuffer[0] = 0x00;
+  Writei2cRegisters(1, ConfigAddress);  // Can be used to change the wait time
+  i2cWriteBuffer[0] = 0x00;
+  Writei2cRegisters(1, ControlAddress);  // RGBC gain control
+  i2cWriteBuffer[0] = 0x03;
+  Writei2cRegisters(1, EnableAddress);  // enable ADs and oscillator for sensor
+}
 
-  void get_TCS34725ID(void) {
-    Readi2cRegisters(1, IDAddress);
-    if (i2cReadBuffer[0] = 0x44)
-      Serial.println("TCS34725 is present");
-    else
-      Serial.println("TCS34725 not responding");
-  }
+void get_TCS34725ID(void) {
+  Readi2cRegisters(1, IDAddress);
+  if (i2cReadBuffer[0] = 0x44)
+    Serial.println("TCS34725 is present");
+  else
+    Serial.println("TCS34725 not responding");
+}
 
-  /*
+
+
+/*
       Reads the register values for clear, red, green, and blue.
       */
 
-  void get_Colors(void) {
+void get_Colors(void) {
+  Serial.println("line");
+  Readi2cRegisters(8, ColorAddress);
+  clear_color = (unsigned int)(i2cReadBuffer[1] << 8) + (unsigned int)i2cReadBuffer[0];
+  red_color = (unsigned int)(i2cReadBuffer[3] << 8) + (unsigned int)i2cReadBuffer[2];
+  green_color = (unsigned int)(i2cReadBuffer[5] << 8) + (unsigned int)i2cReadBuffer[4];
+  blue_color = (unsigned int)(i2cReadBuffer[7] << 8) + (unsigned int)i2cReadBuffer[6];
 
-    Readi2cRegisters(8, ColorAddress);
-    clear_color = (unsigned int)(i2cReadBuffer[1] << 8) + (unsigned int)i2cReadBuffer[0];
-    red_color = (unsigned int)(i2cReadBuffer[3] << 8) + (unsigned int)i2cReadBuffer[2];
-    green_color = (unsigned int)(i2cReadBuffer[5] << 8) + (unsigned int)i2cReadBuffer[4];
-    blue_color = (unsigned int)(i2cReadBuffer[7] << 8) + (unsigned int)i2cReadBuffer[6];
+  //t_end = millis();
 
-    //t_end = millis();
+  //t_sum = t_sum + t_end - t_start;
 
-    //t_sum = t_sum + t_end - t_start;
-
-    // send register values to the serial monitor
+  // send register values to the serial monitor
 
 
-    if (count == 100) {
-      count = 0;
-      t_end = millis();
+  if (count == 100) {
+    count = 0;
+    t_end = millis();
 
-      Serial.print("t_end - t_start:");
-      Serial.println(t_end - t_start, DEC);
+    Serial.print("t_end - t_start:");
+    Serial.println(t_end - t_start, DEC);
 
-      t_start = t_end;
-      t_sum = 0;
-    }
-    count++;
-
-    Serial.print("clear color=");
-    Serial.print(clear_color, DEC);
-    Serial.print(" red color=");
-    Serial.print(red_color, DEC);
-    Serial.print(" green color=");
-    Serial.print(green_color, DEC);
-    Serial.print(" blue color=");
-    Serial.println(blue_color, DEC);
+    t_start = t_end;
+    t_sum = 0;
   }
-};
+  count++;
+
+  Serial.print("clear color=");
+  Serial.print(clear_color, DEC);
+  Serial.print(" red color=");
+  Serial.print(red_color, DEC);
+  Serial.print(" green color=");
+  Serial.print(green_color, DEC);
+  Serial.print(" blue color=");
+  Serial.println(blue_color, DEC);
+}
 
 int getUSDistance(int trigPin, int echoPin) {
   digitalWrite(trigPin, LOW);
@@ -201,17 +201,17 @@ int getUSDistance(int trigPin, int echoPin) {
 
 AccelStepper LStepper(1, LEFT_STEPPER_STEP, LEFT_STEPPER_DIR);
 AccelStepper RStepper(1, RIGHT_STEPPER_STEP, RIGHT_STEPPER_DIR);
-float spMp = 1;
+float spMp = 2;
 class Steppers {
 public:
   static int setup() {
     LStepper.setMaxSpeed(1000 * spMp);
     RStepper.setMaxSpeed(1000 * spMp);
 
-    LStepper.setAcceleration(5000);
-    RStepper.setAcceleration(5000);
+    LStepper.setAcceleration(1000 * spMp);
+    RStepper.setAcceleration(1000 * spMp);
     LStepper.setSpeed(1000 * spMp);
-    RStepper.setSpeed(1000);
+    RStepper.setSpeed(1000 * spMp);
   }
   static void run() {
     LStepper.run();
@@ -323,10 +323,7 @@ public:
     while (!(digitalRead(LEFT_IN_IR_SENSOR) && digitalRead(RIGHT_IN_IR_SENSOR)))
       followLine();
     lineFollowStop();
-    LStepper.moveTo(0);
-    LStepper.setCurrentPosition(0);
-    RStepper.moveTo(0);
-    RStepper.setCurrentPosition(0);
+    forceStop();
     runUntilEnd();
   }
   static void goUntilEnd() {
@@ -342,8 +339,7 @@ public:
       followLine(true);
     lineFollowStop();
     move(500);
-    LStepper.setCurrentPosition(0);
-    RStepper.setCurrentPosition(0);
+    forceStop();
     LStepper.moveTo(1000);
     RStepper.moveTo(1000);
     runUntilEnd();
@@ -351,13 +347,13 @@ public:
   static void Rotate(int degree) {
     //3195 je pun krug
     //3195/360 = 8.875
-    LStepper.move((long)(8.85 * degree));
-    RStepper.move((long)(8.85 * -degree));
+    LStepper.move((long)(8.65 * degree));
+    RStepper.move((long)(8.65 * -degree));
 
     runUntilEnd();
     if (degree == 180) {
       move(-500);
-      runUntilEnd();      
+      runUntilEnd();
     }
   }
 
@@ -380,10 +376,9 @@ public:
   }
 
   static bool alignWithLine() {
-    LStepper.setMaxSpeed(100);
-    RStepper.setMaxSpeed(100);
-    LStepper.setCurrentPosition(0);
-    RStepper.setCurrentPosition(0);
+    LStepper.setMaxSpeed(100 * spMp);
+    RStepper.setMaxSpeed(100 * spMp);
+    forceStop();
     LStepper.moveTo(1000);
     RStepper.moveTo(1000);
 
@@ -402,8 +397,8 @@ public:
         LStepper.run();
       }
     }
-    LStepper.setMaxSpeed(1000);
-    RStepper.setMaxSpeed(1000);
+    LStepper.setMaxSpeed(1000 * spMp);
+    RStepper.setMaxSpeed(1000 * spMp);
   }
 };
 
@@ -473,17 +468,19 @@ bool parnaStanica = false;
 void setup() {
   setupPins();
   Serial.begin(9600);
-
   brushlessMotor.write(50);
   Steppers::setup();
 
-  //Servos::setup(60, 0, 0);
-  Servos::setup(95, 180, 0);
-  Servos::move(120, 0, 0);
-  Servos::move(60, 0, 0);
-  //colorSensor::init_TCS34725();
-  //colorSensor::get_TCS34725ID();
+  Servos::setup(60, 0, 0);
 
+
+  //Servos::setup(95, 180, 0);
+  //Servos::move(120, 0, 0);
+  //Servos::move(60, 0, 0);
+  init_TCS34725();
+  //get_TCS34725ID();
+
+  return;
 
   do {
     Steppers::followUntilLeftTurn();
@@ -504,7 +501,6 @@ void setup() {
     Steppers::followUntilRightTurn();
     Steppers::followUntilLeftTurn();
     Steppers::followUntilEnd();
-
     Steppers::alignWithLine();
     if (Servos::pickupBall()) break;
     Steppers::Rotate(180);
@@ -521,6 +517,7 @@ void setup() {
     Steppers::followUntilEnd();
     Steppers::alignWithLine();
   } while (false);
+
   Steppers::Rotate(180);
   if (parnaStanica) Steppers::followUntilRightTurn();
   else Steppers::followUntilLeftTurn();
@@ -533,6 +530,7 @@ void setup() {
   do {
     Steppers::followUntilLeftTurn();
     Steppers::followUntilEnd();
+    Steppers::alignWithLine();
     if (Servos::pickupBall()) break;
     Steppers::Rotate(180);
     parnaStanica = !parnaStanica;
@@ -540,6 +538,7 @@ void setup() {
     Steppers::followUntilLeftTurn();
     Steppers::followUntilRightTurn();
     Steppers::followUntilEnd();
+    Steppers::alignWithLine();
     if (Servos::pickupBall()) break;
     Steppers::Rotate(180);
     parnaStanica = !parnaStanica;
@@ -547,6 +546,7 @@ void setup() {
     Steppers::followUntilRightTurn();
     Steppers::followUntilLeftTurn();
     Steppers::followUntilEnd();
+    Steppers::alignWithLine();
     if (Servos::pickupBall()) break;
     Steppers::Rotate(180);
     parnaStanica = !parnaStanica;
@@ -554,6 +554,7 @@ void setup() {
     Steppers::followUntilLeftTurn();
     Steppers::followUntilRightTurn();
     Steppers::followUntilEnd();
+    Steppers::alignWithLine();
     if (Servos::pickupBall()) break;
     Steppers::Rotate(180);
     parnaStanica = !parnaStanica;
@@ -564,8 +565,10 @@ void setup() {
   if (parnaStanica) Steppers::followUntilLeftTurn();
   else Steppers::followUntilRightTurn();
   Steppers::goUntilEnd();
+  Steppers::alignWithLine();
   Servos::release();
 }
 void loop() {
-  Serial.println(getUSDistance(LEFT_US_SENSOR_TRIG, LEFT_US_SENSOR_ECHO));
+  //Serial.println(getUSDistance(LEFT_US_SENSOR_TRIG, LEFT_US_SENSOR_ECHO));
+  
 }
