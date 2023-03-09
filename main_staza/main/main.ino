@@ -2,7 +2,7 @@
 #include <Wire.h>
 #include <Math.h>
 #include <Servo.h>
-#include <LiquidCrystal_I2C.h>
+
 #define DISTANCE_TO_BALL 15
 
 
@@ -21,8 +21,8 @@
 #define LEFT_US_SENSOR_ECHO 37
 #define RIGHT_US_SENSOR_TRIG 31
 #define RIGHT_US_SENSOR_ECHO 33
-#define FRONT_US_SENSOR_TRIG 29
-#define FRONT_US_SENSOR_ECHO 27
+#define FRONT_US_SENSOR_TRIG 26
+#define FRONT_US_SENSOR_ECHO 28
 
 #define BALL_SWITCH 43
 
@@ -46,10 +46,6 @@
 
 
 Servo bottomServo, midServo, gripperServo, brushlessMotor;
-LiquidCrystal_I2C lcd = LiquidCrystal_I2C(0x3F, 16, 2);
-
-int ballsCollected = 0;
-
 
 void setupPins() {
   pinMode(RIGHT_STEPPER_DIR, OUTPUT);
@@ -69,8 +65,6 @@ void setupPins() {
   pinMode(RIGHT_US_SENSOR_TRIG, OUTPUT);
   pinMode(LEFT_US_SENSOR_TRIG, OUTPUT);
   pinMode(FRONT_US_SENSOR_TRIG, OUTPUT);
-
-  pinMode(10, OUTPUT);
 
   pinMode(BALL_SWITCH, INPUT_PULLUP);
 
@@ -246,11 +240,11 @@ public:
   static bool followLine() {
     LStepper.move(10000);
     RStepper.move(10000);
-    if (digitalRead(LEFT_IN_IR_SENSOR)) {
+    if (isLeftIn()) {
       LStepper.setMaxSpeed(750 * spMp);
       RStepper.setMaxSpeed(1000 * spMp);
     }
-    if (digitalRead(RIGHT_IN_IR_SENSOR)) {
+    if (isRightIn()) {
       LStepper.setMaxSpeed(1000 * spMp);
       RStepper.setMaxSpeed(750 * spMp);
     }
@@ -309,22 +303,22 @@ public:
     LStepper.setCurrentPosition(0);
     RStepper.moveTo(0);
     RStepper.setCurrentPosition(0);
+    runUntilEnd();
   }
   static void goUntilEnd() {
-    unsigned long cooldownn = millis();
+    int cooldown = millis();
     while (true) {
-      followLine();
-      if (millis() > cooldownn + 500) {
-        cooldownn = millis();
-        lcd.clear();
-        int sen = getUSDistance(LEFT_US_SENSOR_TRIG, LEFT_US_SENSOR_ECHO);
-        lcd.print(sen);
-        if (sen < 30) break;
+      followLine(true);
+      if (millis() > cooldown + 1000) {
+        cooldown = millis();
+        if (getUSDistance(LEFT_US_SENSOR_TRIG, LEFT_US_SENSOR_ECHO) < 30) break;
       }
     }
-    lcd.print("OUT");
-
-    followUntilEnd();
+    while (!(digitalRead(LEFT_IN_IR_SENSOR) && digitalRead(RIGHT_IN_IR_SENSOR)))
+      followLine();
+    lineFollowStop();
+    move(500);
+    runUntilEnd();
   }
   static void Rotate(int degree) {
     //3195 je pun krug
@@ -356,79 +350,32 @@ public:
     LStepper.setMaxSpeed(1000 * spMp);
     RStepper.setMaxSpeed(1000 * spMp);
   }
-  static void RotateUntilSensEnd(int degree) {
-    Rotate(degree * 20);
 
-    LStepper.setMaxSpeed(400 * spMp);
-    RStepper.setMaxSpeed(400 * spMp);
-    LStepper.move(10000 * degree);
-    RStepper.move(10000 * -degree);
-    if (degree < 0)
-      while (!digitalRead(RIGHT_IN_IR_SENSOR))
-        run();
-    else
-      while (!digitalRead(LEFT_IN_IR_SENSOR))
-        run();
-
-    LStepper.setMaxSpeed(1000 * spMp);
-    RStepper.setMaxSpeed(1000 * spMp);
-  }
   static bool alignWithLine() {
     LStepper.setMaxSpeed(100);
     RStepper.setMaxSpeed(100);
-    forceStop();
-    LStepper.moveTo(1000);
-    RStepper.moveTo(1000);
-    while (digitalRead(LEFT_IN_IR_SENSOR) && digitalRead(RIGHT_IN_IR_SENSOR)) {
-      run();
-    }
-
-    if (!digitalRead(LEFT_IN_IR_SENSOR)) {
-      while (digitalRead(RIGHT_IN_IR_SENSOR)) {
-        RStepper.run();
-      }
-    } else if (!digitalRead(RIGHT_IN_IR_SENSOR)) {
-      while (digitalRead(LEFT_IN_IR_SENSOR)) {
-        LStepper.run();
-      }
-    }
-    while (!digitalRead(LEFT_IN_IR_SENSOR) || !digitalRead(RIGHT_IN_IR_SENSOR)) {
-      run();
-    }
-
-    if (digitalRead(LEFT_IN_IR_SENSOR)) {
-      while (!digitalRead(RIGHT_IN_IR_SENSOR)) {
-        RStepper.run();
-      }
-    } else if (digitalRead(RIGHT_IN_IR_SENSOR)) {
-      while (!digitalRead(LEFT_IN_IR_SENSOR)) {
-        LStepper.run();
-      }
-    }
-    while (digitalRead(LEFT_IN_IR_SENSOR) && digitalRead(RIGHT_IN_IR_SENSOR)) {
-      run();
-    }
-
-    if (!digitalRead(LEFT_IN_IR_SENSOR)) {
-      while (digitalRead(RIGHT_IN_IR_SENSOR)) {
-        RStepper.run();
-      }
-    } else if (!digitalRead(RIGHT_IN_IR_SENSOR)) {
-      while (digitalRead(LEFT_IN_IR_SENSOR)) {
-        LStepper.run();
-      }
-    }
-
-
-    LStepper.setMaxSpeed(1000);
-    RStepper.setMaxSpeed(1000);
-    forceStop();
-  }
-  static void forceStop() {
     LStepper.setCurrentPosition(0);
     RStepper.setCurrentPosition(0);
-    LStepper.moveTo(0);
-    RStepper.moveTo(0);
+    LStepper.moveTo(1000);
+    RStepper.moveTo(1000);
+
+
+
+    while (digitalRead(LEFT_IN_IR_SENSOR) && digitalRead(RIGHT_IN_IR_SENSOR)) {
+      run();
+    }
+    if (!digitalRead(LEFT_IN_IR_SENSOR)) {
+      while (digitalRead(RIGHT_IN_IR_SENSOR)) {
+        RStepper.run();
+      }
+    }
+    if (digitalRead(RIGHT_STEPPER_DIR)) {
+      while (digitalRead(LEFT_IN_IR_SENSOR)) {
+        LStepper.run();
+      }
+    }
+    LStepper.setMaxSpeed(1000);
+    RStepper.setMaxSpeed(1000);
   }
 };
 
@@ -473,24 +420,20 @@ public:
   }
   static bool pickupBall() {
     Servos::move(32, 0, 0);
-    Servos::move(32, 0, 110);
+    Servos::move(32, 0, 120);
     hasBall = !digitalRead(BALL_SWITCH);
-    if (hasBall) {
-      Servos::move(60, 0, 110);
-      ballsCollected++;
-    } else Servos::move(60, 0, 0);
+    if (hasBall) Servos::move(60, 0, 120);
+    else Servos::move(60, 0, 0);
     return hasBall;
   }
   static void shoot() {
     Servos::move(60, 0, 100);
     Servos::move(130, 0, 100);
     Servos::move(80, 180, 100);
-    brushlessMotor.write(80);
+    brushlessMotor.write(75);
     Servos::move(80, 180, 0);
     delay(2000);
     brushlessMotor.write(50);
-    Servos::move(130, 0, 0);
-    Servos::move(60, 0, 0);
   }
   static void release() {
     //naciljati kam pustiti lopticu
@@ -498,34 +441,13 @@ public:
     Servos::move(60, 0, 0);
   }
 };
-
-
 bool parnaStanica = false;
-//            
-//              /$$$$$$  /$$$$$$$$ /$$$$$$$$ /$$   /$$ /$$$$$$$ 
-//             /$$__  $$| $$_____/|__  $$__/| $$  | $$| $$__  $$
-//            | $$  \__/| $$         | $$   | $$  | $$| $$  \ $$
-//            |  $$$$$$ | $$$$$      | $$   | $$  | $$| $$$$$$$/
-//             \____  $$| $$__/      | $$   | $$  | $$| $$____/ 
-//             /$$  \ $$| $$         | $$   | $$  | $$| $$      
-//            |  $$$$$$/| $$$$$$$$   | $$   |  $$$$$$/| $$      
-//             \______/ |________/   |__/    \______/ |__/      
-                                                  
-                                                  
-                                              
-
-
-
 void setup() {
   setupPins();
   Serial.begin(9600);
 
   brushlessMotor.write(50);
   Steppers::setup();
-  lcd.init();
-  lcd.backlight();
-  lcd.setCursor(3, 0);
-  lcd.print("Hello, world!");
 
   //Servos::setup(60, 0, 0);
   Servos::setup(95, 180, 0);
@@ -534,178 +456,91 @@ void setup() {
   //colorSensor::init_TCS34725();
   //colorSensor::get_TCS34725ID();
   
-  return;
-  if (false) {
-    Steppers::move(2000);
-    Steppers::runUntilEnd();
-    Steppers::Rotate(-90);
-    Steppers::move(1000);
-    Steppers::runUntilEnd();
-
-
-    do {
-      Steppers::followUntilLeftTurn();
-      Steppers::followUntilEnd();
-      Steppers::alignWithLine();
-      if (Servos::pickupBall()) break;
-      Steppers::Rotate(180);
-
-      parnaStanica = !parnaStanica;
-      Steppers::followUntilLeftTurn();
-      Steppers::followUntilRightTurn();
-      Steppers::followUntilEnd();
-      Steppers::alignWithLine();
-      if (Servos::pickupBall()) break;
-      Steppers::Rotate(180);
-
-      parnaStanica = !parnaStanica;
-      Steppers::followUntilRightTurn();
-      Steppers::followUntilLeftTurn();
-      Steppers::followUntilEnd();
-
-      Steppers::alignWithLine();
-      if (Servos::pickupBall()) break;
-      Steppers::Rotate(180);
-
-      parnaStanica = !parnaStanica;
-      Steppers::followUntilLeftTurn();
-      Steppers::followUntilRightTurn();
-      Steppers::followUntilEnd();
-      Steppers::alignWithLine();
-      if (Servos::pickupBall()) break;
-      Steppers::Rotate(180);
-
-      Steppers::followUntilRightTurn();
-      Steppers::followUntilEnd();
-      Steppers::alignWithLine();
-    } while (false);
-
-    Steppers::Rotate(180);
-    if (parnaStanica) Steppers::followUntilRightTurn();
-    else Steppers::followUntilLeftTurn();
-    lcd.setCursor(0, 0);
-
-    lcd.print("goUntilEnd");
-    Steppers::goUntilEnd();
-    lcd.print("alignWLine");
-    Steppers::alignWithLine();
-    lcd.print("release");
-    Servos::release();
-    do {
-      do {
-        Steppers::Rotate(180);
-        parnaStanica = false;
-
-        Steppers::followUntilLeftTurn();
-        Steppers::followUntilEnd();
-        if (Servos::pickupBall()) break;
-        Steppers::Rotate(180);
-        parnaStanica = !parnaStanica;
-
-        Steppers::followUntilLeftTurn();
-        Steppers::followUntilRightTurn();
-        Steppers::followUntilEnd();
-        if (Servos::pickupBall()) break;
-        Steppers::Rotate(180);
-        parnaStanica = !parnaStanica;
-
-        Steppers::followUntilRightTurn();
-        Steppers::followUntilLeftTurn();
-        Steppers::followUntilEnd();
-        if (Servos::pickupBall()) break;
-        Steppers::Rotate(180);
-        parnaStanica = !parnaStanica;
-
-        Steppers::followUntilLeftTurn();
-        Steppers::followUntilRightTurn();
-        Steppers::followUntilEnd();
-        if (Servos::pickupBall()) break;
-        Steppers::Rotate(180);
-        parnaStanica = !parnaStanica;
-
-      } while (false);
-      Steppers::Rotate(180);
-      if (!parnaStanica) Steppers::followUntilRightTurn();
-      else Steppers::followUntilLeftTurn();
-
-      lcd.print("goUntilEnd");
-      Steppers::goUntilEnd();
-      lcd.print("alignWLine");
-      lcd.print("release");
-      Servos::release();
-    } while (ballsCollected < 2);
-  }
-  ballsCollected = 0;
-  Steppers::Rotate(-100);
-  Steppers::followUntilRightTurn();
+//Steppers::goUntilEnd();
+return;  
   do {
+    Steppers::followUntilLeftTurn();
     Steppers::followUntilEnd();
     Steppers::alignWithLine();
-    while (true)
-      if (Servos::pickupBall()) break;
-    Steppers::Rotate(-90);
-    Steppers::forceStop();
-    LStepper.setMaxSpeed(300);
-    RStepper.setMaxSpeed(300);
-    LStepper.move(-10000);
-    RStepper.move(10000);
-    while (!digitalRead(RIGHT_IN_IR_SENSOR)) {
-      Steppers::run();
-    }
+    if (Servos::pickupBall()) break;
+    Steppers::Rotate(180);
 
-    LStepper.setMaxSpeed(1000);
-    RStepper.setMaxSpeed(1000);
-
+    parnaStanica = !parnaStanica;
+    Steppers::followUntilLeftTurn();
+    Steppers::followUntilRightTurn();
     Steppers::followUntilEnd();
     Steppers::alignWithLine();
+    if (Servos::pickupBall()) break;
+    Steppers::Rotate(180);
 
-    Steppers::Rotate(-90);
-    Steppers::forceStop();
-    LStepper.setMaxSpeed(200);
-    RStepper.setMaxSpeed(200);
-    LStepper.move(-10000);
-    RStepper.move(10000);
-    while (!digitalRead(RIGHT_IN_IR_SENSOR)) {
-      Steppers::run();
-    }
+    parnaStanica = !parnaStanica;
+    Steppers::followUntilRightTurn();
+    Steppers::followUntilLeftTurn();
+    Steppers::followUntilEnd();
 
+    Steppers::alignWithLine();
+    if (Servos::pickupBall()) break;
+    Steppers::Rotate(180);
 
-    LStepper.setMaxSpeed(100);
-    RStepper.setMaxSpeed(100);
-    LStepper.move(10000);
-    RStepper.move(-10000);
-    unsigned long lMil = millis();
-    int dist = 10000, stage = 0, lastDist = 0;
-    for (int i = 0; i < 3000; i++) {
-      if (millis() > lMil + 100) {
-        dist = getUSDistance(FRONT_US_SENSOR_TRIG, FRONT_US_SENSOR_ECHO);
-        lMil = millis();
-      }
-      lcd.clear();
-      lcd.print(dist);
-      if (dist < 100 && dist > 2 && stage == 0) {
-        stage++;
-        lastDist = dist;
-      }
-      if (dist < 100 && dist > 2 && stage == 1 && dist < lastDist - 4) {
-        lcd.print("PIJU!");
-        stage++;
-        break;
-      }
+    parnaStanica = !parnaStanica;
+    Steppers::followUntilLeftTurn();
+    Steppers::followUntilRightTurn();
+    Steppers::followUntilEnd();
+    Steppers::alignWithLine();
+    if (Servos::pickupBall()) break;
+    Steppers::Rotate(180);
 
-      Steppers::run();
-    }
-    delay(1000000);
+    Steppers::followUntilRightTurn();
+    Steppers::followUntilEnd();
+    Steppers::alignWithLine();
+  } while (false);
+  Steppers::Rotate(180);
+  if (parnaStanica) Steppers::followUntilRightTurn();
+  else Steppers::followUntilLeftTurn();
+  Steppers::goUntilEnd();
+  Steppers::alignWithLine();
+  Servos::release();
+  Steppers::Rotate(180);
 
-    Servos::shoot();
-  } while (ballsCollected < 3);
+  parnaStanica = false;
+  do {
+    Steppers::followUntilLeftTurn();
+    Steppers::followUntilEnd();
+    if (Servos::pickupBall()) break;
+    Steppers::Rotate(180);
+    parnaStanica = !parnaStanica;
+
+    Steppers::followUntilLeftTurn();
+    Steppers::followUntilRightTurn();
+    Steppers::followUntilEnd();
+    if (Servos::pickupBall()) break;
+    Steppers::Rotate(180);
+    parnaStanica = !parnaStanica;
+
+    Steppers::followUntilRightTurn();
+    Steppers::followUntilLeftTurn();
+    Steppers::followUntilEnd();
+    if (Servos::pickupBall()) break;
+    Steppers::Rotate(180);
+    parnaStanica = !parnaStanica;
+
+    Steppers::followUntilLeftTurn();
+    Steppers::followUntilRightTurn();
+    Steppers::followUntilEnd();
+    if (Servos::pickupBall()) break;
+    Steppers::Rotate(180);
+    parnaStanica = !parnaStanica;
+
+  } while (false);
+
+  Steppers::Rotate(180);
+  if (parnaStanica) Steppers::followUntilLeftTurn();
+  else Steppers::followUntilRightTurn();
+  Steppers::goUntilEnd();
+  Steppers::alignWithLine();
+  Servos::release();
 }
-
-
 void loop() {
-  analogWrite(10,0);
-    delay(150);
-  analogWrite(10,150);
-    delay(150);
-  
+  Serial.println("ABC");
+  Serial.println(getUSDistance(LEFT_US_SENSOR_TRIG, LEFT_US_SENSOR_ECHO));
 }
