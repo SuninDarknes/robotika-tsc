@@ -534,13 +534,7 @@ void setup() {
   //colorSensor::init_TCS34725();
   //colorSensor::get_TCS34725ID();
   
-  return;
-  if (false) {
-    Steppers::move(2000);
-    Steppers::runUntilEnd();
-    Steppers::Rotate(-90);
-    Steppers::move(1000);
-    Steppers::runUntilEnd();
+    Steppers::followUntilLeftTurn();
 
 
     do {
@@ -549,7 +543,7 @@ void setup() {
       Steppers::alignWithLine();
       if (Servos::pickupBall()) break;
       Steppers::Rotate(180);
-
+/*
       parnaStanica = !parnaStanica;
       Steppers::followUntilLeftTurn();
       Steppers::followUntilRightTurn();
@@ -578,6 +572,7 @@ void setup() {
       Steppers::followUntilRightTurn();
       Steppers::followUntilEnd();
       Steppers::alignWithLine();
+  */
     } while (false);
 
     Steppers::Rotate(180);
@@ -634,7 +629,7 @@ void setup() {
       lcd.print("release");
       Servos::release();
     } while (ballsCollected < 2);
-  }
+
   ballsCollected = 0;
   Steppers::Rotate(-100);
   Steppers::followUntilRightTurn();
