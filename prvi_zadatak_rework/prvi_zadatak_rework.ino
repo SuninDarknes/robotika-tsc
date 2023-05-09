@@ -623,15 +623,16 @@ void setup() {
   lcd.setCursor(3, 0);
   lcd.print("Hello, world!");
 
-  Servos::setup(60, 0, 0);
+  Servos::setup(90, 90, 90);
+  Servos::move(60, 0, 0);
   //colorSensor::init_TCS34725();
   //colorSensor::get_TCS34725ID();
-  Steppers::move(100);
-  Steppers::runUntilEnd();
-
-
+  delay(1000);
+  return;
   do {
     Steppers::followUntilLeftTurn();
+
+    return;
     Steppers::followUntilEnd();
     Steppers::alignWithLine();
     Steppers::korekcija();
