@@ -191,15 +191,6 @@ public:
     Serial.print(" blue color=");
     Serial.println(blue_color, DEC);
   }
-
-  bool isColor(int r_in, int g_in, int b_in, int c_in) {
-    int r, g, b;
-    r = cs.red_color;
-    g = cs.green_color;
-    b = cs.blue_color;
-
-    return (abs(r - r_in) < 1000 && abs(g - g_in) < 1000 && abs(b - b_in) < 1000 && cs.clear_color > c_in);
-  }
 };
 //Vraca vrijednost u cm od danog ultrasoniconog senzora.
 int getUSDistance(int trigPin, int echoPin) {
@@ -482,50 +473,35 @@ public:
   static void korekcija() {
     forceStop();
     Rotate(-10);
+    int endCountdown = 0;
     LStepper.setMaxSpeed(100);
     RStepper.setMaxSpeed(100);
     LStepper.move(10000);
     RStepper.move(-10000);
-    int LDist = 1000;
-    int RDist = 1000;
+    int dist = 1000;
     unsigned long lMil = millis();
-    bool foundTeglin = false;
     while (true) {
-      if (millis() > lMil + 50) {
-        LDist = getUSDistance(LEFT_US_SENSOR_TRIG, LEFT_US_SENSOR_ECHO);
-        RDist = getUSDistance(RIGHT_US_SENSOR_TRIG, RIGHT_US_SENSOR_ECHO);
+      if (millis() > lMil + 100) {
+        dist = getUSDistance(LEFT_US_SENSOR_TRIG, LEFT_US_SENSOR_ECHO);
         lMil = millis();
         lcd.clear();
-        lcd.print(LDist);
-        lcd.print("  ");
-        lcd.print(RDist);
+        lcd.print(dist);
       }
-      if (RDist < 20) foundTeglin = true;
 
-      if (LDist - RDist < -1 && foundTeglin) {
-
-        forceStop();
-        break;
+      if (endCountdown != 0) {
+        endCountdown++;
+        if (endCountdown > 20) {
+          LStepper.setMaxSpeed(1000);
+          RStepper.setMaxSpeed(1000);
+          forceStop();
+          return;
+        }
+      } else if (dist > 3 && dist <= 17) {
+        endCountdown++;
       }
 
       run();
     }
-    LStepper.move(10000);
-    RStepper.move(10000);
-    for (int i = 0; i < 2; i++)
-      while (LDist != 8) {
-        LDist = getUSDistance(LEFT_US_SENSOR_TRIG, LEFT_US_SENSOR_ECHO);
-        if (LDist - 8 > 0) {
-          LStepper.setSpeed(100);
-          RStepper.setSpeed(100);
-        } else {
-          LStepper.setSpeed(-100);
-          RStepper.setSpeed(-100);
-        }
-        run();
-      }
-    LStepper.setMaxSpeed(1000);
-    RStepper.setMaxSpeed(1000);
   }
 };
 
@@ -584,8 +560,6 @@ public:
     } else Servos::move(60, 0, 0);
     return hasBall;
   }
-
-
   //pucanje tako da ruka digne lopticu, aktivra se brushless motor i loptica se ispušta u cijev
   static void shoot() {
     Servos::move(60, 0, 100);
@@ -606,14 +580,6 @@ public:
     Servos::move(22, 0, 0);
 
     Servos::move(60, 0, 110);
-  }
-    //Ispuštanje loptice
-  static void releaseHigh() {
-    //naciljati kam pustiti lopticu
-    Servos::move(80, 0, 110);
-    Servos::move(80, 0, 0);
-
-    Servos::move(80, 0, 110);
   }
   //Cilja dok ne nađe najbljiži čunj i tada puca.
   //AZ: Postavit ga za 20* stupnjeva u ljevo od središnjeg čunja i puca kad vidi prvi cunj.
@@ -690,10 +656,6 @@ void setup() {
   cs.init_TCS34725();
   cs.get_TCS34725ID();
   cs.get_Colors();
-
-  Steppers::Rotate(-90);
-  Steppers::move(2000);
-  Steppers::runUntilEnd();
 
   do {
     Steppers::followUntilLeftTurn();
