@@ -739,7 +739,7 @@ void setup() {
   Servos::setup(90, 90, 90);
   Servos::move(60, 0, 0);
   
-
+  
   cs.init_TCS34725();
   cs.get_TCS34725ID();
   cs.get_Colors();
