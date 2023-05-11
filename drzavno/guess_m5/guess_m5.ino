@@ -384,7 +384,7 @@ public:
     //3195 je pun krug
     //3195/360 = 8.875
     resetSpeed();
-    float jedanStupanjStep = 3185.0 / 360.0;
+    float jedanStupanjStep = 3400.0 / 360.0;
     float okretanje = jedanStupanjStep * degree;
     LStepper.move((long)okretanje);
     RStepper.move((long)-okretanje);
@@ -525,7 +525,7 @@ public:
       }
       if (RDist < 15) foundTeglin = true;
 
-      if (LDist - RDist < 1 && foundTeglin) {
+      if (LDist - RDist < 0 && foundTeglin) {
 
         forceStop();
         break;
@@ -638,10 +638,13 @@ public:
     Servos::move(60, 180, 100);
     brushlessMotor.write(100);
     Servos::move(60, 180, 0);
-    delay(2000);
-    forceMove(130, 60, 0);
-    
-    forceMove(45, 0, 0);
+    delay(1000);
+    for (int i = 0; i < 5; i++) {
+      forceMove(130, 60, 0);
+      forceMove(45, 0, 0);
+    }
+
+
 
     delay(1000);
     brushlessMotor.write(50);
@@ -707,7 +710,7 @@ public:
   }
 };
 
-colorSensor cs;
+//colorSensor cs;
 
 //              /$$$$$$  /$$$$$$$$ /$$$$$$$$ /$$   /$$ /$$$$$$$
 //             /$$__  $$| $$_____/|__  $$__/| $$  | $$| $$__  $$
@@ -734,137 +737,207 @@ void setup() {
 
   Servos::setup(90, 90, 90);
   Servos::move(60, 0, 0);
-
-
-  
+  /*
   cs.init_TCS34725();
   cs.get_TCS34725ID();
   cs.get_Colors();
+*/
 
-
-  while (false) {
-
-    bool lijevaStanica = false;
+  bool lijevaStanica = false;
 
 
 
-    Steppers::runUntilLine();
-    Steppers::move(900);
+  Steppers::runUntilLine();
+  Steppers::move(900);
+  Steppers::runUntilEnd();
+
+  Steppers::Rotate(-90);
+  //     /$$$$$$  /$$$$$$$$ /$$$$$$  /$$$$$$$  /$$$$$$$$
+  //    /$$__  $$|__  $$__//$$__  $$| $$__  $$|__  $$__/
+  //   | $$  \__/   | $$  | $$  \ $$| $$  \ $$   | $$
+  //   |  $$$$$$    | $$  | $$$$$$$$| $$$$$$$/   | $$
+  //    \____  $$   | $$  | $$__  $$| $$__  $$   | $$
+  //    /$$  \ $$   | $$  | $$  | $$| $$  \ $$   | $$
+  //   |  $$$$$$/   | $$  | $$  | $$| $$  | $$   | $$
+  //    \______/    |__/  |__/  |__/|__/  |__/   |__/
+
+  int brojUlica = 0;
+  for (brojUlica = 0; brojUlica < 3; brojUlica++) {
+    Steppers::followUntilLeftTurn();
+    Steppers::followUntilEnd();
+    Steppers::alignWithLine();
+    Steppers::korekcija(12);
+    Steppers::korekcija(12);
+    lijevaStanica = !lijevaStanica;
+    if (Servos::pickupBall()) break;  //Lopta 1
+    Steppers::Rotate(180, true);
+
+    Steppers::followUntilEnd();
+    Steppers::move(200);
     Steppers::runUntilEnd();
+    Steppers::followUntilEnd();
+    Steppers::alignWithLine();
+    Steppers::korekcija(12);
+    Steppers::korekcija(12);
+    lijevaStanica = !lijevaStanica;
+    if (Servos::pickupBall()) break;  //Lopta 2
+    Steppers::Rotate(180, true);
+    Steppers::followUntilRightTurn();
+  }
+  Steppers::Rotate(180, true);
+  if (lijevaStanica) Steppers::followUntilLeftTurn();
+  else Steppers::followUntilRightTurn();
 
-    Steppers::Rotate(-90);
-    //     /$$$$$$  /$$$$$$$$ /$$$$$$  /$$$$$$$  /$$$$$$$$
-    //    /$$__  $$|__  $$__//$$__  $$| $$__  $$|__  $$__/
-    //   | $$  \__/   | $$  | $$  \ $$| $$  \ $$   | $$
-    //   |  $$$$$$    | $$  | $$$$$$$$| $$$$$$$/   | $$
-    //    \____  $$   | $$  | $$__  $$| $$__  $$   | $$
-    //    /$$  \ $$   | $$  | $$  | $$| $$  \ $$   | $$
-    //   |  $$$$$$/   | $$  | $$  | $$| $$  | $$   | $$
-    //    \______/    |__/  |__/  |__/|__/  |__/   |__/
 
-    int brojUlica = 0;
-    for (brojUlica = 0; brojUlica < 3; brojUlica++) {
-      Steppers::followUntilLeftTurn();
-      Steppers::followUntilEnd();
-      Steppers::alignWithLine();
-      Steppers::korekcija(12);
-      Steppers::korekcija(12);
-      lijevaStanica = !lijevaStanica;
-      if (Servos::pickupBall()) break;  //Lopta 1
-      Steppers::Rotate(180, true);
+  for (brojUlica; brojUlica < 3; brojUlica++) {
+    Steppers::followUntilEnd();
+    Steppers::move(200);
+    Steppers::runUntilEnd();
+  }
+  brojUlica = 0;
 
-      Steppers::followUntilEnd();
-      Steppers::alignWithLine();
-      Steppers::korekcija(12);
-      Steppers::korekcija(12);
-      lijevaStanica = !lijevaStanica;
-      if (Servos::pickupBall()) break;  //Lopta 2
+  Steppers::korekcija(14);
+  Servos::releaseHigh();
+
+
+  //     /$$$$$$            /$$        /$$$$$$   /$$$$$$  /$$$$$$$
+  //    /$$__  $$          | $$       /$$__  $$ /$$__  $$| $$__  $$
+  //   |__/  \ $$          | $$      | $$  \ $$| $$  \ $$| $$  \ $$
+  //     /$$$$$$/          | $$      | $$  | $$| $$  | $$| $$$$$$$/
+  //    /$$____/           | $$      | $$  | $$| $$  | $$| $$____/
+  //   | $$                | $$      | $$  | $$| $$  | $$| $$
+  //   | $$$$$$$$ /$$      | $$$$$$$$|  $$$$$$/|  $$$$$$/| $$
+  //   |________/|__/      |________/ \______/  \______/ |__/
+
+  int brojPraznihPosudica = 0;
+  Steppers::RotateUntilSens(-3);
+  lijevaStanica = true;
+  for (brojUlica = 0; brojUlica < 3; brojUlica++) {
+    Steppers::followUntilLeftTurn();
+    Steppers::followUntilEnd();
+    Steppers::alignWithLine();
+    Steppers::korekcija(12);
+    Steppers::korekcija(12);
+    lijevaStanica = !lijevaStanica;
+    if (Servos::pickupBall()) break;
+    brojPraznihPosudica++;
+    Steppers::Rotate(180, true);
+
+    Steppers::followUntilEnd();
+    Steppers::move(200);
+    Steppers::runUntilEnd();
+    Steppers::followUntilEnd();
+    Steppers::alignWithLine();
+    Steppers::korekcija(12);
+    Steppers::korekcija(12);
+    lijevaStanica = !lijevaStanica;
+    if (Servos::pickupBall()) break;
+    brojPraznihPosudica++;
+    Steppers::Rotate(180, true);
+    Steppers::followUntilRightTurn();
+  }
+  Steppers::Rotate(180, true);
+  if (lijevaStanica) Steppers::followUntilLeftTurn();
+  else Steppers::followUntilRightTurn();
+
+  for (brojUlica; brojUlica >= 0; brojUlica--) {
+    Steppers::followUntilEnd();
+    Steppers::move(200);
+    Steppers::runUntilEnd();
+  }
+  brojUlica = 0;
+
+  Steppers::korekcija(14);
+  Servos::releaseHigh();
+
+  //      /$$$$$$           /$$        /$$$$$$  /$$$$$$$  /$$$$$$$
+  //     /$$__  $$         | $$       /$$__  $$| $$__  $$| $$__  $$
+  //    |__/  \ $$         | $$      | $$  \ $$| $$  \ $$| $$  \ $$
+  //       /$$$$$/         | $$      | $$  | $$| $$$$$$$/| $$$$$$$/
+  //      |___  $$         | $$      | $$  | $$| $$____/ | $$____/
+  //     /$$  \ $$         | $$      | $$  | $$| $$      | $$
+  //    |  $$$$$$//$$      | $$$$$$$$|  $$$$$$/| $$      | $$
+  //     \______/|__/      |________/ \______/ |__/      |__/
+
+  Steppers::Rotate(180);
+  lijevaStanica = true;
+  if (brojPraznihPosudica >= 2) {
+    Steppers::followUntilEnd();
+    Steppers::move(200);
+    Steppers::runUntilEnd();
+  }
+
+  if (brojPraznihPosudica % 2 == 1) {
+    Steppers::followUntilRightTurn();
+    Steppers::followUntilEnd();
+    Steppers::alignWithLine();
+    Steppers::korekcija(12);
+    Steppers::korekcija(12);
+    lijevaStanica = true;
+    if (Servos::pickupBall()) brojPraznihPosudica = 6;
+    else {
       Steppers::Rotate(180, true);
       Steppers::followUntilRightTurn();
     }
-    Steppers::Rotate(180, true);
-    if (lijevaStanica) Steppers::followUntilLeftTurn();
-    else Steppers::followUntilRightTurn();
-
-
-    for (brojUlica; brojUlica < 3; brojUlica++) {
-      Steppers::followUntilEnd();
-      Steppers::move(200);
-      Steppers::runUntilEnd();
-    }
-    brojUlica = 0;
-
-    Steppers::korekcija(14);
-    Servos::releaseHigh();
-
-
-    //     /$$$$$$            /$$        /$$$$$$   /$$$$$$  /$$$$$$$
-    //    /$$__  $$          | $$       /$$__  $$ /$$__  $$| $$__  $$
-    //   |__/  \ $$          | $$      | $$  \ $$| $$  \ $$| $$  \ $$
-    //     /$$$$$$/          | $$      | $$  | $$| $$  | $$| $$$$$$$/
-    //    /$$____/           | $$      | $$  | $$| $$  | $$| $$____/
-    //   | $$                | $$      | $$  | $$| $$  | $$| $$
-    //   | $$$$$$$$ /$$      | $$$$$$$$|  $$$$$$/|  $$$$$$/| $$
-    //   |________/|__/      |________/ \______/  \______/ |__/
-
-    for (int i = 0; i < 2; i++) {
-      Steppers::Rotate(180);
-      lijevaStanica = true;
-      for (brojUlica = 0; brojUlica < 3; brojUlica++) {
-        Steppers::followUntilLeftTurn();
-        Steppers::followUntilEnd();
-        Steppers::alignWithLine();
-        Steppers::korekcija(12);
-        Steppers::korekcija(12);
-        lijevaStanica = !lijevaStanica;
-        if (Servos::pickupBall()) break;
-        Steppers::Rotate(180, true);
-
-        Steppers::followUntilEnd();
-        Steppers::move(200);
-        Steppers::runUntilEnd();
-        Steppers::followUntilEnd();
-        Steppers::alignWithLine();
-        Steppers::korekcija(12);
-        Steppers::korekcija(12);
-        lijevaStanica = !lijevaStanica;
-        if (Servos::pickupBall()) break;
-        Steppers::Rotate(180, true);
-        Steppers::followUntilRightTurn();
-      }
-      Steppers::Rotate(180, true);
-      if (lijevaStanica) Steppers::followUntilLeftTurn();
-      else Steppers::followUntilRightTurn();
-
-      for (brojUlica; brojUlica >= 0; brojUlica--) {
-        Steppers::followUntilEnd();
-        Steppers::move(200);
-        Steppers::runUntilEnd();
-      }
-      brojUlica = 0;
-
-      Steppers::korekcija(14);
-      Servos::releaseHigh();
-    }
-
-    //     /$$$$$$$   /$$$$$$  /$$$$$$$  /$$$$$$$$         /$$          /$$$$$$   /$$$$$$  /$$$$$$$$ /$$$$$$  /$$    /$$
-    //    | $$__  $$ /$$__  $$| $$__  $$|__  $$__/       /$$$$         /$$__  $$ /$$__  $$|__  $$__//$$__  $$| $$   | $$
-    //    | $$  \ $$| $$  \ $$| $$  \ $$   | $$         |_  $$        | $$  \__/| $$  \ $$   | $$  | $$  \ $$| $$   | $$
-    //    | $$$$$$$/| $$$$$$$$| $$$$$$$/   | $$           | $$        | $$ /$$$$| $$  | $$   | $$  | $$  | $$|  $$ / $$/
-    //    | $$____/ | $$__  $$| $$__  $$   | $$           | $$        | $$|_  $$| $$  | $$   | $$  | $$  | $$ \  $$ $$/
-    //    | $$      | $$  | $$| $$  \ $$   | $$           | $$        | $$  \ $$| $$  | $$   | $$  | $$  | $$  \  $$$/
-    //    | $$      | $$  | $$| $$  | $$   | $$          /$$$$$$      |  $$$$$$/|  $$$$$$/   | $$  |  $$$$$$/   \  $/
-    //    |__/      |__/  |__/|__/  |__/   |__/         |______/       \______/  \______/    |__/   \______/     \_/
-
-
-
-    Steppers::Rotate(-90);
-    Steppers::runUntilLine();
-    Steppers::alignWithLine();
-    Steppers::move(900);
-    Steppers::runUntilEnd();
-    Steppers::RotateUntilSens(-1);
   }
+
+  for (brojUlica = 0; brojUlica < 3 - brojPraznihPosudica / 2 - brojPraznihPosudica % 2; brojUlica++) {
+    Steppers::followUntilLeftTurn();
+    Steppers::followUntilEnd();
+    Steppers::alignWithLine();
+    Steppers::korekcija(12);
+    Steppers::korekcija(12);
+    lijevaStanica = !lijevaStanica;
+    if (Servos::pickupBall()) break;
+    Steppers::Rotate(180, true);
+
+    Steppers::followUntilEnd();
+    Steppers::move(200);
+    Steppers::runUntilEnd();
+    Steppers::followUntilEnd();
+    Steppers::alignWithLine();
+    Steppers::korekcija(12);
+    Steppers::korekcija(12);
+    lijevaStanica = !lijevaStanica;
+    if (Servos::pickupBall()) break;
+    Steppers::Rotate(180, true);
+    Steppers::followUntilRightTurn();
+  }
+  Steppers::Rotate(180, true);
+  if (lijevaStanica) Steppers::followUntilLeftTurn();
+  else Steppers::followUntilRightTurn();
+
+  for (brojUlica; brojUlica >= 0; brojUlica--) {
+    Steppers::followUntilEnd();
+    Steppers::move(200);
+    Steppers::runUntilEnd();
+  }
+  brojUlica = 0;
+
+  Steppers::korekcija(14);
+  Servos::releaseHigh();
+
+
+
+  //     /$$$$$$$   /$$$$$$  /$$$$$$$  /$$$$$$$$         /$$          /$$$$$$   /$$$$$$  /$$$$$$$$ /$$$$$$  /$$    /$$
+  //    | $$__  $$ /$$__  $$| $$__  $$|__  $$__/       /$$$$         /$$__  $$ /$$__  $$|__  $$__//$$__  $$| $$   | $$
+  //    | $$  \ $$| $$  \ $$| $$  \ $$   | $$         |_  $$        | $$  \__/| $$  \ $$   | $$  | $$  \ $$| $$   | $$
+  //    | $$$$$$$/| $$$$$$$$| $$$$$$$/   | $$           | $$        | $$ /$$$$| $$  | $$   | $$  | $$  | $$|  $$ / $$/
+  //    | $$____/ | $$__  $$| $$__  $$   | $$           | $$        | $$|_  $$| $$  | $$   | $$  | $$  | $$ \  $$ $$/
+  //    | $$      | $$  | $$| $$  \ $$   | $$           | $$        | $$  \ $$| $$  | $$   | $$  | $$  | $$  \  $$$/
+  //    | $$      | $$  | $$| $$  | $$   | $$          /$$$$$$      |  $$$$$$/|  $$$$$$/   | $$  |  $$$$$$/   \  $/
+  //    |__/      |__/  |__/|__/  |__/   |__/         |______/       \______/  \______/    |__/   \______/     \_/
+
+
+
+  Steppers::Rotate(-90);
+  Steppers::runUntilLine();
+  Steppers::alignWithLine();
+  Steppers::resetSpeed();
+  Steppers::move(900);
+  Steppers::runUntilEnd();
+  Steppers::RotateUntilSens(-1);
+
   Steppers::followUntilEnd();
   Steppers::alignWithLine();
   Steppers::Rotate(-1);
@@ -882,53 +955,6 @@ void setup() {
     Steppers::korekcija(11);
     while (!Servos::pickupBall()) {}
     Servos::shoot();
-  }
-
-
-
-
-
-
-
-
-
-
-  return;
-
-  Steppers::resetSpeed();
-  Steppers::move(2000);
-  Steppers::runUntilEnd();
-
-  Steppers::resetSpeed();
-  Steppers::runUntilLine();
-
-  Steppers::resetSpeed();
-  Steppers::move(900);
-  Steppers::runUntilEnd();
-
-
-  Steppers::RotateUntilSens(-1);
-
-  Steppers::resetSpeed();
-  Steppers::move(900);
-  Steppers::runUntilEnd();
-
-  Steppers::Rotate(180);
-
-  for (int x = 0; x < 3; x++) {
-
-    Steppers::followUntilEnd();
-    Steppers::alignWithLine();
-    Steppers::korekcija(8);
-    while (!Servos::pickupBall()) {}
-
-    Steppers::Rotate(180);
-    Steppers::followUntilEnd();
-    Steppers::alignWithLine();
-    Steppers::Rotate(150);
-    Servos::aimAndShoot();
-    Steppers::Rotate(-50);
-    Steppers::RotateUntilSens(1);
   }
 }
 
