@@ -200,7 +200,7 @@ public:
 
     return (abs(r - r_in) < 1000 && abs(g - g_in) < 1000 && abs(b - b_in) < 1000 && clear_color > c_in);
   }
-  void printColor(){
+  void printColor() {
     get_Colors();
     lcd.clear();
     lcd.print(red_color);
@@ -431,7 +431,7 @@ public:
     forceStop();
 
     ////LOOP za poravnavanje
-    for (int i = 0; i < 3; i++) {
+    for (int i = 0; i < 7; i++) {
       lcd.clear();
       lcd.print("Poravnavanje ");
       lcd.print(i);
@@ -669,7 +669,7 @@ public:
 };
 
 colorSensor cs;
-bool parnaStanica = false;
+bool lijevaStanica = false;
 
 //              /$$$$$$  /$$$$$$$$ /$$$$$$$$ /$$   /$$ /$$$$$$$
 //             /$$__  $$| $$_____/|__  $$__/| $$  | $$| $$__  $$
@@ -701,140 +701,39 @@ void setup() {
   cs.get_TCS34725ID();
   cs.get_Colors();
 
-
-
-  return;
-  Steppers::Rotate(-90);
-  Steppers::move(2000);
+  Steppers::move(1000);  /////PROMJENITI
   Steppers::runUntilEnd();
 
-  do {
-    Steppers::followUntilLeftTurn();
-    Steppers::followUntilEnd();
-    Steppers::alignWithLine();
-    Steppers::korekcija(8);
-    if (Servos::pickupBall()) break;
-    Steppers::Rotate(180);
+  Steppers::Rotate(45);
 
-    Steppers::followUntilLeftTurn();
-    Steppers::followUntilRightTurn();
-    Steppers::followUntilEnd();
-    Steppers::alignWithLine();
-    Steppers::korekcija(8);
-    parnaStanica = !parnaStanica;
-    if (Servos::pickupBall()) break;
-    Steppers::Rotate(180);
-
-    Steppers::followUntilRightTurn();
-    Steppers::followUntilLeftTurn();
-    Steppers::followUntilEnd();
-    Steppers::alignWithLine();
-    Steppers::korekcija(8);
-    parnaStanica = !parnaStanica;
-    if (Servos::pickupBall()) break;
-    Steppers::Rotate(180);
-
-    Steppers::followUntilRightTurn();
-    Steppers::followUntilLeftTurn();
-    Steppers::followUntilEnd();
-    Steppers::alignWithLine();
-    Steppers::korekcija(8);
-    parnaStanica = !parnaStanica;
-    if (Servos::pickupBall()) break;
-
-  } while (false);
-
-  Steppers::Rotate(180);
-  if (parnaStanica) Steppers::followUntilRightTurn();
-  else Steppers::followUntilLeftTurn();
-  Steppers::followUntilEndIgnoreOut();
-  Servos::release();
-  Steppers::Rotate(180);
-
-
-  do {
-    Steppers::followUntilLeftTurn();
-    Steppers::followUntilEnd();
-    Steppers::alignWithLine();
-    Steppers::korekcija(8);
-    parnaStanica = false;
-    if (Servos::pickupBall()) break;
-    Steppers::Rotate(180);
-
-    Steppers::followUntilLeftTurn();
-    Steppers::followUntilRightTurn();
-    Steppers::followUntilEnd();
-    Steppers::alignWithLine();
-    Steppers::korekcija(8);
-    parnaStanica = !parnaStanica;
-    if (Servos::pickupBall()) break;
-    Steppers::Rotate(180);
-
-    Steppers::followUntilRightTurn();
-    Steppers::followUntilLeftTurn();
-    Steppers::followUntilEnd();
-    Steppers::alignWithLine();
-    Steppers::korekcija(8);
-    parnaStanica = !parnaStanica;
-    if (Servos::pickupBall()) break;
-    Steppers::Rotate(180);
-
-    Steppers::followUntilLeftTurn();
-    Steppers::followUntilRightTurn();
-    Steppers::followUntilEnd();
-    Steppers::alignWithLine();
-    Steppers::korekcija(8);
-    parnaStanica = !parnaStanica;
-    if (Servos::pickupBall()) break;
-
-  } while (false);
-
-  Steppers::Rotate(180);
-  if (parnaStanica) Steppers::followUntilLeftTurn();
-  else Steppers::followUntilRightTurn();
-  Steppers::followUntilEndIgnoreOut();
-  Servos::release();
-
-  Steppers::Rotate(-92);
-
-  Steppers::resetSpeed();
-  Steppers::move(2000);
+  Steppers::move(-500);  /////PROMJENITI
   Steppers::runUntilEnd();
-
-  Steppers::resetSpeed();
   Steppers::runUntilLine();
 
+  Steppers::alignWithLine();
+
+  delay(2000);
+  Steppers::Rotate(-45);
+  Steppers::move(700);  /////PROMJENITI
+  Steppers::runUntilEnd();
+  Steppers::followUntilEnd();
+  Steppers::alignWithLine();
   Steppers::resetSpeed();
   Steppers::move(900);
   Steppers::runUntilEnd();
-
-
-  Steppers::RotateUntilSens(-1);
-
-  Steppers::resetSpeed();
-  Steppers::move(900);
+  Steppers::Rotate(-90);
+  Steppers::move(-300);
   Steppers::runUntilEnd();
 
-  Steppers::Rotate(180);
-
-  for (int x = 0; x < 3; x++) {
-
-    Steppers::followUntilEnd();
-    Steppers::alignWithLine();
-    Steppers::korekcija(8);
-    while (!Servos::pickupBall()) {}
-
-    Steppers::Rotate(180);
-    Steppers::followUntilEnd();
-    Steppers::alignWithLine();
-    Steppers::Rotate(150);
-    Servos::aimAndShoot();
-    Steppers::Rotate(-50);
-    Steppers::RotateUntilSens(1);
-  }
+  Steppers::followUntilEnd();
+  Steppers::alignWithLine();
+  delay(1000);
+  lcd.clear();
+  lcd.print(getUSDistance(LEFT_US_SENSOR_TRIG, LEFT_US_SENSOR_ECHO));
+  delay(1000);
+  while (!Servos::pickupBall()) {}
 }
 
 
 void loop() {
-  
 }
