@@ -587,7 +587,7 @@ void setup() {
   Steppers::Rotate(180);
   Servos::shoot();
   }
-void loop() {
+void loop() { 
   //Serial.println(getUSDistance(LEFT_US_SENSOR_TRIG, LEFT_US_SENSOR_ECHO));
   ColorSensor::get_Colors();
 }
