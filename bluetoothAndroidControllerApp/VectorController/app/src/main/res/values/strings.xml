@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">Vector Controller</string>
+    <string name="gripper">Gripper</string>
+</resources>
